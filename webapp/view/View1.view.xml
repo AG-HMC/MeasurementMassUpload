@@ -1,0 +1,124 @@
+<mvc:View controllerName="measuringdocumentmassupload.controller.View1"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"  xmlns:u="sap.ui.unified" xmlns:f="sap.ui.layout.form">
+    <Page id="page" title="{i18n>pageTitle}">
+     <content>
+	<f:SimpleForm  >
+	<f:content>
+
+	   <HBox alignItems="Center" justifyContent="SpaceBetween" width="100%">
+            <HBox alignItems="Center" class="sapUiSmallMarginBegin">
+                <Label text="Select the file to upload" class="sapUiSmallMarginEnd"/>
+                <u:FileUploader 
+                    id="fileUploader1"
+                    uploadOnChange="true"
+                    buttonText="Browse"
+                    icon="sap-icon://upload"
+                    change="onSelectFile"
+					 />
+            </HBox>
+              <ToolbarSpacer/>
+    
+                  <HBox alignItems="Center" justifyContent="End" class="sapUiSmallMarginEnd">
+    <Button 
+        text="Template"  
+        press="onPressDownload"  
+        icon="sap-icon://download" 
+        type="Emphasized"
+        class="sapUiSmallMarginEnd"/>
+    <Button
+      icon="sap-icon://action-settings"
+      press="onPressColumnSettings"
+      type="Transparent"
+      tooltip="{i18n>settingsTooltip}" />
+  </HBox>
+        </HBox>
+	</f:content>
+	</f:SimpleForm>
+
+          <Table items="{batchModel>/aEmployees}" mode="MultiSelect" id="tblInput"     growing="true"
+                   growingScrollToLoad="true" >
+			  <columns>
+   
+    <Column id="colMeasuringPoint"><Text text="Measuring Point"/></Column>
+    <Column id="colDescription" ><Text text="Description"/></Column>
+    <Column id="colPosition" ><Text text="Position Number"/></Column>
+    <Column id="colCounter"><Text text="Counter/Reading"/></Column>
+    <Column id="colDifference" ><Text text="Difference"/></Column>
+    <Column id="colPostingDate"><Text text="Posting Date"/></Column>
+    <Column id="colText" ><Text text="Text"/></Column>
+    <Column id="colReadyBy" ><Text text="Read By"/></Column>
+  </columns>
+				<items >
+					<ColumnListItem >
+						<cells>
+
+							<Text text="{batchModel>Measuring Point}"></Text>
+                            <Text text="{batchModel>MeasuringPointDescription}"/>
+<Text text="{batchModel>MeasuringPointPositionNumber}"/>
+							<Text text="{batchModel>Counter}"></Text>
+								<Text text="{batchModel>Difference}"></Text>
+									<Text text="{batchModel>Posting Date}"></Text>
+										<Text text="{batchModel>Text}"></Text>
+											<Text text="{batchModel>MsmtRdngByUser}"/>
+											
+						</cells>
+					</ColumnListItem>
+				</items>
+			</Table>
+       <!-- Logs Table (hidden until submit) -->
+            <VBox id="idTableLayout" visible="false" class="sapUiSmallMarginTop">
+                <Toolbar>
+                    <Title text="Logs" level="H3"/>
+                    <ToolbarSpacer/>
+                    <Button text="Clear" type="Transparent" press=".onClearLogs"/>
+                </Toolbar> 
+                <Table id="tblLogs" items="{path: 'ErrorListModel>/errItems'}">
+                     <columns>
+    <Column><Text text="Measuring Point"/></Column>
+    <Column><Text text="Value"/></Column>        <!-- parsed -->
+   
+    <Column><Text text="Message"/></Column>
+   <Column id="colStatus">
+  <header>
+    <Toolbar>
+      <Title text="Status" />
+      <ToolbarSpacer/>
+      <Button
+        id="btnSortStatus"
+        icon="sap-icon://sort"
+        tooltip="Toggle Status sort"
+        press=".onPressToggleLogSort" />
+    </Toolbar>
+  </header>
+</Column>
+  </columns>
+                    <items>
+                        <ColumnListItem>
+                            <cells>
+                                 <Text text="{ErrorListModel>Equipment}"/>
+        <Text text="{ErrorListModel>Value}"/>
+   
+        <Text text="{ErrorListModel>ErrorText}"/>
+       <ObjectStatus
+          text="{ErrorListModel>State}"
+          state="{= ${ErrorListModel>State} === 'SUCCESS' ? 'Success' : (${ErrorListModel>State} === 'FAILED' ? 'Error' : 'None') }"
+          active="false"/>
+
+                            </cells>
+                        </ColumnListItem>
+                    </items>
+                </Table>
+            </VBox>
+	 
+	  </content>
+
+          <footer>
+			<Bar>
+				<contentRight>
+					<Button text="Submit" type="Emphasized" press="onPressSubmitBatch"></Button>
+				</contentRight>
+			</Bar>
+		</footer>
+    </Page>
+</mvc:View>
