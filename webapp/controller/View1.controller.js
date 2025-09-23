@@ -769,7 +769,7 @@ COLUMN SETTINGS / PERSONALIZATION
         } catch (e) { /* ignore */ }
         // ===========================================================================
         // Helpers to format date/time
-        var toYYYYMMDD = function (s) {
+        /*var toYYYYMMDD = function (s) {
           if (!s) {
             var d0 = new Date();
             return d0.getFullYear() + "-" + String(d0.getMonth() + 1).padStart(2, "0") + "-" + String(d0.getDate()).padStart(2, "0");
@@ -783,6 +783,77 @@ COLUMN SETTINGS / PERSONALIZATION
           if (!isNaN(d.getTime())) return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
           var d2 = new Date();
           return d2.getFullYear() + "-" + String(d2.getMonth() + 1).padStart(2, "0") + "-" + String(d2.getDate()).padStart(2, "0");
+        };*/
+
+        var toYYYYMMDD = function (s) {
+          // Default: today
+          var today = new Date();
+          var defaultStr = today.getFullYear() + "-" +
+            String(today.getMonth() + 1).padStart(2, "0") + "-" +
+            String(today.getDate()).padStart(2, "0");
+
+          if (!s) return defaultStr;
+          s = String(s).trim();
+
+          // Already in YYYY-MM-DD
+          if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+            return s;
+          }
+
+          // SAP style: /Date(....)/
+          if (s.indexOf("/Date(") === 0) {
+            var ms = parseInt(s.replace("/Date(", "").replace(")/", ""), 10);
+            var d0 = new Date(ms);
+            return d0.getFullYear() + "-" +
+              String(d0.getMonth() + 1).padStart(2, "0") + "-" +
+              String(d0.getDate()).padStart(2, "0");
+          }
+
+          // dd-mm-yyyy or dd/mm/yyyy
+          if (/^\d{2}[-/]\d{2}[-/]\d{4}$/.test(s)) {
+            var p1 = s.split(/[-/]/);
+            return p1[2] + "-" + p1[1].padStart(2, "0") + "-" + p1[0].padStart(2, "0");
+          }
+
+          // dd.mm.yyyy
+          if (/^\d{2}\.\d{2}\.\d{4}$/.test(s)) {
+            var p2 = s.split(".");
+            return p2[2] + "-" + p2[1].padStart(2, "0") + "-" + p2[0].padStart(2, "0");
+          }
+
+          // ddmmyyyy (no delimiters, distinguish from yyyymmdd)
+          if (/^\d{8}$/.test(s)) {
+            var day = s.substring(0, 2);
+            var month = s.substring(2, 4);
+            var year = s.substring(4, 8);
+            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) {
+              return year + "-" + month + "-" + day;
+            }
+            // Otherwise assume already YYYYMMDD
+            return s.substring(0, 4) + "-" + s.substring(4, 6) + "-" + s.substring(6, 8);
+          }
+
+          // Excel serial number (e.g., 45921 → 2025-09-22)
+          if (/^\d+$/.test(s)) {
+            var n = Number(s);
+            if (n > 59) n -= 1; // Excel leap year bug (1900 treated as leap)
+            var epoch = new Date(Date.UTC(1899, 11, 30));
+            epoch.setUTCDate(epoch.getUTCDate() + n);
+            return epoch.getUTCFullYear() + "-" +
+              String(epoch.getUTCMonth() + 1).padStart(2, "0") + "-" +
+              String(epoch.getUTCDate()).padStart(2, "0");
+          }
+
+          // Fallback generic parse
+          var d3 = new Date(s);
+          if (!isNaN(d3.getTime())) {
+            return d3.getFullYear() + "-" +
+              String(d3.getMonth() + 1).padStart(2, "0") + "-" +
+              String(d3.getDate()).padStart(2, "0");
+          }
+
+          // Final fallback: today
+          return defaultStr;
         };
 
         var systemTimeHHMMSS = function () {
@@ -922,7 +993,6 @@ COLUMN SETTINGS / PERSONALIZATION
     },
 
     _toYYYYMMDD: function (s) {
-
       if (!s) return null;
       s = String(s).trim();
 
@@ -952,24 +1022,22 @@ COLUMN SETTINGS / PERSONALIZATION
         return parts2[2] + parts2[1].padStart(2, "0") + parts2[0].padStart(2, "0");
       }
 
-      // ddmmyyyy (no delimiters)
+      // ddmmyyyy (no delimiters, distinguish from yyyymmdd)
       if (/^\d{8}$/.test(s)) {
         var day = s.substring(0, 2);
         var month = s.substring(2, 4);
         var year = s.substring(4, 8);
-        // Ensure it's not already YYYYMMDD
         if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) {
           return year + month + day;
         }
-        return s; // assume already YYYYMMDD
+        // Otherwise assume already YYYYMMDD
+        return s;
       }
 
-      // Excel serial number
+      // Excel serial number (e.g., 45921 → 20250922)
       if (/^\d+$/.test(s)) {
         var n = Number(s);
-        if (n > 59) { // Excel bug: 1900 is treated as leap year
-          n -= 1;
-        }
+        if (n > 59) n -= 1; // Excel leap year bug (1900 treated as leap)
         var epoch = new Date(Date.UTC(1899, 11, 30)); // Excel base date
         epoch.setUTCDate(epoch.getUTCDate() + n);
         return epoch.getUTCFullYear().toString() +
@@ -986,8 +1054,8 @@ COLUMN SETTINGS / PERSONALIZATION
       }
 
       return null; // not parseable
-
-    }, // ✅ closing brace was missing
+    }
+    , // ✅ closing brace was missing
     onSelectFile: function (oEvent) {
       this._import(oEvent.getParameter("files") && oEvent.getParameter("files")[0]);
     },
@@ -1123,11 +1191,15 @@ COLUMN SETTINGS / PERSONALIZATION
             normalized.PostingDateRaw = pd; // keep original
             // convert to display format dd/mm/yyyy for UI
             // use helper _toYYYYMMDD if available — ensure it's called on controller instance later
-            normalized.PostingDate = pd && that._toYYYYMMDD ? (function () {
+            /*normalized.PostingDate = pd && that._toYYYYMMDD ? (function () {
               var ymd = that._toYYYYMMDD(pd); // returns YYYYMMDD or null
               if (!ymd) return "";
-              return ymd.slice(6, 8) + "/" + ymd.slice(4, 6) + "/" + ymd.slice(0, 4);
-            })() : (pd || "");
+              //return ymd.slice(6, 8) + "/" + ymd.slice(4, 6) + "/" + ymd.slice(0, 4);
+              return ymd;
+            })() : (pd || "");*/
+
+            //normalized.PostingDate = that._toYYYYMMDD(pd);
+            normalized.PostingDate = that._convertDisplayDate(pd);
 
             // Text
             normalized.MeasurementDocumentText = lookup(["MeasurementDocumentText", "Text", "LongText", "note"]) || "";
@@ -1214,6 +1286,78 @@ COLUMN SETTINGS / PERSONALIZATION
         this.byId("idTableLayout") && this.byId("idTableLayout").setVisible(false);
         this.byId("tblInput") && this.byId("tblInput").setVisible(true);
       } catch (e) { }
+    },
+
+
+    _convertDisplayDate(input) {
+        if (!input) return "Invalid Format use DD/MM/YYYY";
+  var s = String(input).trim();
+
+  // Excel serial number (e.g., 45921 → 22/09/2025)
+  if (/^\d{1,7}$/.test(s)) {
+    var n = Number(s);
+    if (n > 59) n -= 1; // Excel leap year bug
+    var epoch = new Date(Date.UTC(1899, 11, 30));
+    epoch.setUTCDate(epoch.getUTCDate() + n);
+    return String(epoch.getUTCDate()).padStart(2, "0") + "/" +
+           String(epoch.getUTCMonth() + 1).padStart(2, "0") + "/" +
+           epoch.getUTCFullYear();
+  }
+
+  // YYYYMMDD
+  if (/^\d{8}$/.test(s)) {
+    var y = s.substring(4, 8);
+    var m = s.substring(2, 4);
+    var d = s.substring(0, 2);
+    return d + "/" + m + "/" + y;
+  }
+
+  // YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    var parts1 = s.split("-");
+    return parts1[2] + "/" + parts1[1] + "/" + parts1[0];
+  }
+
+  // DD-MM-YYYY or DD/MM/YYYY
+  if (/^\d{2}[-/]\d{2}[-/]\d{4}$/.test(s)) {
+    var parts2 = s.split(/[-/]/);
+    return parts2[0] + "/" + parts2[1] + "/" + parts2[2];
+  }
+
+  // DD.MM.YYYY
+  if (/^\d{2}\.\d{2}\.\d{4}$/.test(s)) {
+    var parts3 = s.split(".");
+    return parts3[0] + "/" + parts3[1] + "/" + parts3[2];
+  }
+
+  // DDMMYYYY (no delimiters, ensure not YYYYMMDD)
+  if (/^\d{8}$/.test(s)) {
+    var d2 = s.substring(0, 2);
+    var m2 = s.substring(2, 4);
+    var y2 = s.substring(4, 8);
+    if (parseInt(d2, 10) <= 31 && parseInt(m2, 10) <= 12) {
+      return d2 + "/" + m2 + "/" + y2;
+    }
+  }
+
+  // SAP OData style: /Date(....)/
+  if (s.indexOf("/Date(") === 0) {
+    var ms = parseInt(s.replace("/Date(", "").replace(")/", ""), 10);
+    var d3 = new Date(ms);
+    return String(d3.getUTCDate()).padStart(2, "0") + "/" +
+           String(d3.getUTCMonth() + 1).padStart(2, "0") + "/" +
+           d3.getUTCFullYear();
+  }
+
+  // Generic parse (last attempt)
+  var d4 = new Date(s);
+  if (!isNaN(d4.getTime())) {
+    return String(d4.getUTCDate()).padStart(2, "0") + "/" +
+           String(d4.getUTCMonth() + 1).padStart(2, "0") + "/" +
+           d4.getUTCFullYear();
+  }
+
+  return "Invalid Format use DD/MM/YYYY";
     }
   });
 });

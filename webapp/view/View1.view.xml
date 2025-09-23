@@ -58,7 +58,7 @@
 <Text text="{batchModel>MeasuringPointPositionNumber}"/>
 							<Text text="{batchModel>Counter}"></Text>
 								<Text text="{batchModel>Difference}"></Text>
-									<Text text="{batchModel>Posting Date}"></Text>
+									<Text text="{batchModel>PostingDate}"></Text>
 										<Text text="{batchModel>Text}"></Text>
 											<Text text="{batchModel>MsmtRdngByUser}"/>
 											
