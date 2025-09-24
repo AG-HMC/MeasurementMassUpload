@@ -769,7 +769,7 @@ COLUMN SETTINGS / PERSONALIZATION
         } catch (e) { /* ignore */ }
         // ===========================================================================
         // Helpers to format date/time
-        /*var toYYYYMMDD = function (s) {
+        /*var toYYYYMMDD = function (s) {   
           if (!s) {
             var d0 = new Date();
             return d0.getFullYear() + "-" + String(d0.getMonth() + 1).padStart(2, "0") + "-" + String(d0.getDate()).padStart(2, "0");
@@ -837,11 +837,11 @@ COLUMN SETTINGS / PERSONALIZATION
           if (/^\d+$/.test(s)) {
             var n = Number(s);
             if (n > 59) n -= 1; // Excel leap year bug (1900 treated as leap)
-            var epoch = new Date(Date.UTC(1899, 11, 30));
-            epoch.setUTCDate(epoch.getUTCDate() + n);
-            return epoch.getUTCFullYear() + "-" +
-              String(epoch.getUTCMonth() + 1).padStart(2, "0") + "-" +
-              String(epoch.getUTCDate()).padStart(2, "0");
+            var epoch = new Date(Date.UTC(1899, 11, 31));
+            epoch.setUTCDate(epoch.getDate() + n);
+            return epoch.getFullYear() + "-" +
+              String(epoch.getMonth() + 1).padStart(2, "0") + "-" +
+              String(epoch.getDate()).padStart(2, "0");
           }
 
           // Fallback generic parse
@@ -1005,9 +1005,9 @@ COLUMN SETTINGS / PERSONALIZATION
       if (s.indexOf("/Date(") === 0) {
         var ms = parseInt(s.replace("/Date(", "").replace(")/", ""), 10);
         var d = new Date(ms);
-        return d.getUTCFullYear().toString() +
-          String(d.getUTCMonth() + 1).padStart(2, "0") +
-          String(d.getUTCDate()).padStart(2, "0");
+        return d.getFullYear().toString() +
+          String(d.getMonth() + 1).padStart(2, "0") +
+          String(d.getDate()).padStart(2, "0");
       }
 
       // dd-mm-yyyy or dd/mm/yyyy
@@ -1038,7 +1038,7 @@ COLUMN SETTINGS / PERSONALIZATION
       if (/^\d+$/.test(s)) {
         var n = Number(s);
         if (n > 59) n -= 1; // Excel leap year bug (1900 treated as leap)
-        var epoch = new Date(Date.UTC(1899, 11, 30)); // Excel base date
+        var epoch = new Date(Date.UTC(1899, 11, 31)); // Excel base date
         epoch.setUTCDate(epoch.getUTCDate() + n);
         return epoch.getUTCFullYear().toString() +
           String(epoch.getUTCMonth() + 1).padStart(2, "0") +
@@ -1187,7 +1187,8 @@ COLUMN SETTINGS / PERSONALIZATION
             if (readByVal !== undefined) normalized.MsmtRdngByUser = String(readByVal).trim();
 
             // Posting date - keep raw + normalized for UI
-            var pd = lookup(["Posting Date", "MsmtRdngDate", "Date", "PostingDate"]);
+            var pd = lookup(["Posting Date", "MsmtRdngDate", "Date", "PostingDate",
+              "Posting Date (DD-MM-YYYY)", "Posting Date (MM-DD-YYYY)", "Posting Date(DD-MM-YYYY)", "PostingDate(DD-MM-YYYY)"]);
             normalized.PostingDateRaw = pd; // keep original
             // convert to display format dd/mm/yyyy for UI
             // use helper _toYYYYMMDD if available — ensure it's called on controller instance later
@@ -1265,10 +1266,10 @@ COLUMN SETTINGS / PERSONALIZATION
       this._ensureXLSX().then(function (XLSX) {
         // existing logic that uses XLSX.utils.json_to_sheet
         var excelColumnList = [{
-          "Measuring Point": "", "Reading": "", "Difference": "", "Posting Date": "", "Text": "", "Read By": ""
+          "Measuring Point": "", "Reading": "", "Difference": "", "Posting Date (DD-MM-YYYY)": "", "Text": "", "Read By": ""
         }];
         var ws = XLSX.utils.json_to_sheet(excelColumnList);
-        ws["!cols"] = [{ width: 15 }, { width: 10 }, { width: 10 }, { width: 12 }, { width: 40 }, { width: 10 }];
+        ws["!cols"] = [{ width: 15 }, { width: 10 }, { width: 10 }, { width: 30 }, { width: 40 }, { width: 10 }];
         var wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
         XLSX.writeFile(wb, "Template.xlsx", { cellStyles: true });
@@ -1290,74 +1291,74 @@ COLUMN SETTINGS / PERSONALIZATION
 
 
     _convertDisplayDate(input) {
-        if (!input) return "Invalid Format use DD/MM/YYYY";
-  var s = String(input).trim();
+      if (!input) return "Invalid Format use DD-MM-YYYY";
+      var s = String(input).trim();
 
-  // Excel serial number (e.g., 45921 → 22/09/2025)
-  if (/^\d{1,7}$/.test(s)) {
-    var n = Number(s);
-    if (n > 59) n -= 1; // Excel leap year bug
-    var epoch = new Date(Date.UTC(1899, 11, 30));
-    epoch.setUTCDate(epoch.getUTCDate() + n);
-    return String(epoch.getUTCDate()).padStart(2, "0") + "/" +
-           String(epoch.getUTCMonth() + 1).padStart(2, "0") + "/" +
-           epoch.getUTCFullYear();
-  }
+      // Excel serial number (e.g., 45921 → 22/09/2025)
+      if (/^\d{1,7}$/.test(s)) {
+        var n = Number(s);
+        if (n > 59) n -= 1; // 
+        var epoch = new Date(Date.UTC(1899, 11, 30));
+        epoch.setUTCDate(epoch.getUTCDate() + n);
+        return String(epoch.getUTCDate()).padStart(2, "0") + "-" +
+          String(epoch.getUTCMonth() + 1).padStart(2, "0") + "-" +
+          epoch.getUTCFullYear();
+      }
 
-  // YYYYMMDD
-  if (/^\d{8}$/.test(s)) {
-    var y = s.substring(4, 8);
-    var m = s.substring(2, 4);
-    var d = s.substring(0, 2);
-    return d + "/" + m + "/" + y;
-  }
+      // YYYYMMDD
+      if (/^\d{8}$/.test(s)) {
+        var y = s.substring(4, 8);
+        var m = s.substring(2, 4);
+        var d = s.substring(0, 2);
+        return d + "-" + m + "-" + y;
+      }
 
-  // YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-    var parts1 = s.split("-");
-    return parts1[2] + "/" + parts1[1] + "/" + parts1[0];
-  }
+      // YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+        var parts1 = s.split("-");
+        return parts1[2] + "-" + parts1[1] + "-" + parts1[0];
+      }
 
-  // DD-MM-YYYY or DD/MM/YYYY
-  if (/^\d{2}[-/]\d{2}[-/]\d{4}$/.test(s)) {
-    var parts2 = s.split(/[-/]/);
-    return parts2[0] + "/" + parts2[1] + "/" + parts2[2];
-  }
+      // DD-MM-YYYY or DD/MM/YYYY
+      if (/^\d{2}[-/]\d{2}[-/]\d{4}$/.test(s)) {
+        var parts2 = s.split(/[-/]/);
+        return parts2[0] + "-" + parts2[1] + "-" + parts2[2];
+      }
 
-  // DD.MM.YYYY
-  if (/^\d{2}\.\d{2}\.\d{4}$/.test(s)) {
-    var parts3 = s.split(".");
-    return parts3[0] + "/" + parts3[1] + "/" + parts3[2];
-  }
+      // DD.MM.YYYY
+      if (/^\d{2}\.\d{2}\.\d{4}$/.test(s)) {
+        var parts3 = s.split(".");
+        return parts3[0] + "-" + parts3[1] + "-" + parts3[2];
+      }
 
-  // DDMMYYYY (no delimiters, ensure not YYYYMMDD)
-  if (/^\d{8}$/.test(s)) {
-    var d2 = s.substring(0, 2);
-    var m2 = s.substring(2, 4);
-    var y2 = s.substring(4, 8);
-    if (parseInt(d2, 10) <= 31 && parseInt(m2, 10) <= 12) {
-      return d2 + "/" + m2 + "/" + y2;
-    }
-  }
+      // DDMMYYYY (no delimiters, ensure not YYYYMMDD)
+      if (/^\d{8}$/.test(s)) {
+        var d2 = s.substring(0, 2);
+        var m2 = s.substring(2, 4);
+        var y2 = s.substring(4, 8);
+        if (parseInt(d2, 10) <= 31 && parseInt(m2, 10) <= 12) {
+          return d2 + "-" + m2 + "-" + y2;
+        }
+      }
 
-  // SAP OData style: /Date(....)/
-  if (s.indexOf("/Date(") === 0) {
-    var ms = parseInt(s.replace("/Date(", "").replace(")/", ""), 10);
-    var d3 = new Date(ms);
-    return String(d3.getUTCDate()).padStart(2, "0") + "/" +
-           String(d3.getUTCMonth() + 1).padStart(2, "0") + "/" +
-           d3.getUTCFullYear();
-  }
+      // SAP OData style: /Date(....)/
+      if (s.indexOf("/Date(") === 0) {
+        var ms = parseInt(s.replace("/Date(", "").replace(")/", ""), 10);
+        var d3 = new Date(ms);
+        return String(d3.getDate()).padStart(2, "0") + "-" +
+          String(d3.getMonth() + 1).padStart(2, "0") + "-" +
+          d3.getFullYear();
+      }
 
-  // Generic parse (last attempt)
-  var d4 = new Date(s);
-  if (!isNaN(d4.getTime())) {
-    return String(d4.getUTCDate()).padStart(2, "0") + "/" +
-           String(d4.getUTCMonth() + 1).padStart(2, "0") + "/" +
-           d4.getUTCFullYear();
-  }
-
-  return "Invalid Format use DD/MM/YYYY";
+      // Generic parse
+      var d4 = new Date(s);
+      if (!isNaN(d4.getTime())) {
+        return String(d4.getDate()).padStart(2, "0") + "-" +
+          String(d4.getMonth() + 1).padStart(2, "0") + "-" +
+          d4.getFullYear();
+      }
+      
+      return "Invalid Format use DD-MM-YYYY";
     }
   });
 });
